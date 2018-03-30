@@ -35,6 +35,9 @@ job "traefik-example" {
         port_map {
           http = 80
         }
+        dns_servers = [
+          "172.17.0.1"
+        ]
         volumes = [
           "/vagrant/files/etc/nginx/conf.d:/etc/nginx/conf.d"
         ]
@@ -73,6 +76,9 @@ job "traefik-example" {
           http = 8080
           api = 8081
         }
+        dns_servers = [
+          "172.17.0.1"
+        ]
         volumes = [
           "/vagrant/files/etc/traefik:/etc/traefik"
         ]
@@ -137,6 +143,9 @@ job "traefik-example" {
         port_map {
           http = 8000
         }
+        dns_servers = [
+          "172.17.0.1"
+        ]
         work_dir = "/var/www/html"
         volumes = [
           "/vagrant/files/var/www/html:/var/www/html"
@@ -158,7 +167,7 @@ job "traefik-example" {
         name = "simplehttpserver"
         tags = [
           "traefik.tags=service",
-          "traefik.frontend.rule=PathPrefix:/traefik",
+          "traefik.frontend.rule=PathPrefixStrip:/traefik/",
         ]
         port = "http"
         check {

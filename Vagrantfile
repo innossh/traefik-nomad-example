@@ -77,6 +77,11 @@ done
 echo "Installing autocomplete..."
 nomad -autocomplete-install
 
+echo "Installing dnsmasq..."
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y dnsmasq
+echo "server=/consul/127.0.0.1#8600" | sudo tee /etc/dnsmasq.conf
+sudo systemctl enable dnsmasq.service
+sudo systemctl restart dnsmasq
 SCRIPT
 
 Vagrant.configure(2) do |config|
