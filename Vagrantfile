@@ -1,6 +1,8 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+# Copied from https://github.com/hashicorp/nomad/tree/v0.7.1/demo/vagrant
+
 $script = <<SCRIPT
 # Update apt and get dependencies
 sudo apt-get update
