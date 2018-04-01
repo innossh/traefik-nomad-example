@@ -44,8 +44,8 @@ job "traefik-example" {
       }
 
       resources {
-        cpu    = 500
-        memory = 256
+        cpu    = 100
+        memory = 128
         network {
           mbits = 10
           port "http" {
@@ -85,8 +85,8 @@ job "traefik-example" {
       }
 
       resources {
-        cpu    = 500
-        memory = 256
+        cpu    = 100
+        memory = 128
         network {
           mbits = 10
           port "http" {
@@ -129,7 +129,7 @@ job "traefik-example" {
       size = 300
     }
 
-    task "simplehttpserver" {
+    task "httpserver0" {
       driver = "docker"
 
       config {
@@ -146,7 +146,7 @@ job "traefik-example" {
         dns_servers = [
           "172.17.0.1"
         ]
-        work_dir = "/var/www/html"
+        work_dir = "/var/www/html/0"
         volumes = [
           "/vagrant/files/var/www/html:/var/www/html"
         ]
@@ -154,9 +154,9 @@ job "traefik-example" {
 
       resources {
         cpu    = 100
-        memory = 128
+        memory = 64
         network {
-          mbits = 10
+          mbits = 5
           port "http" {
             static = 8000
           }
@@ -164,10 +164,61 @@ job "traefik-example" {
       }
 
       service {
-        name = "simplehttpserver"
+        name = "httpserver0"
         tags = [
           "traefik.tags=service",
-          "traefik.frontend.rule=PathPrefixStrip:/traefik/",
+          "traefik.frontend.rule=PathPrefixStrip:/0/",
+        ]
+        port = "http"
+        check {
+          name     = "alive"
+          type     = "tcp"
+          port     = "http"
+          interval = "10s"
+          timeout  = "2s"
+        }
+      }
+    }
+
+    task "httpserver1" {
+      driver = "docker"
+
+      config {
+        image = "python:3.6.4-alpine3.7"
+        command = "python3"
+        args = [
+          "-m",
+          "http.server",
+          "8001"
+        ]
+        port_map {
+          http = 8001
+        }
+        dns_servers = [
+          "172.17.0.1"
+        ]
+        work_dir = "/var/www/html/1"
+        volumes = [
+          "/vagrant/files/var/www/html:/var/www/html"
+        ]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 64
+        network {
+          mbits = 5
+          port "http" {
+            static = 8001
+          }
+        }
+      }
+
+      service {
+        name = "httpserver1"
+        tags = [
+          "traefik.tags=service",
+          "traefik.frontend.rule=PathPrefixStrip:/1/",
         ]
         port = "http"
         check {

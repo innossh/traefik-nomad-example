@@ -14,11 +14,12 @@ $ vagrant ssh -c "sudo nomad run /vagrant/jobs/traefik-example.nomad"
 
 ```console
 $ vagrant ssh
-$ curl http://simplehttpserver.service.consul:8000/
-$ curl http://nginx.service.consul/
-$ curl http://nginx.service.consul/nginx/
-$ curl http://traefik.service.consul:8080/
-$ curl http://traefik.service.consul:8080/traefik/
+$ curl -i http://httpserver0.service.consul:8000/
+$ curl -i http://httpserver1.service.consul:8001/
+$ curl -i http://nginx.service.consul/0/
+$ curl -i http://nginx.service.consul/1/
+$ curl -i http://traefik.service.consul:8080/0/
+$ curl -i http://traefik.service.consul:8080/1/
 ```
 
 Also you can check the nomad and consul status on the web browser. Please access here.
