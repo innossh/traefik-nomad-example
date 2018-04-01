@@ -1,0 +1,12 @@
+{
+    "server": true,
+    "datacenter": "dc1",
+    "node_name": "nomad",
+    "data_dir": "/var/lib/consul",
+    "ui": true,
+    "bootstrap_expect": 1,
+    "bind_addr": "0.0.0.0",
+    "client_addr": "0.0.0.0",
+    "advertise_addr": "10.0.2.15",
+    "recursors": ["8.8.8.8", "8.8.4.4"]
+}

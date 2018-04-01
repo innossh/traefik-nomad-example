@@ -25,9 +25,11 @@ sudo install nomad /usr/bin/nomad
 
 sudo mkdir -p /etc/nomad.d
 sudo chmod a+w /etc/nomad.d
+sudo mkdir -p /var/lib/nomad
+sudo chmod a+w /var/lib/nomad
 
 # Set hostname's IP to made advertisement Just Work
-#sudo sed -i -e "s/.*nomad.*/$(ip route get 1 | awk '{print $NF;exit}') nomad/" /etc/hosts
+#sudo sed -i -e "s/.*nomad.*/192.168.1.21 nomad/" /etc/hosts
 
 echo "Installing Docker..."
 if [[ -f /etc/apt/sources.list.d/docker.list ]]; then
@@ -48,6 +50,8 @@ sudo usermod -aG docker vagrant
 echo "Installing Consul..."
 unzip /tmp/consul.zip
 sudo install consul /usr/bin/consul
+sudo mkdir -p /var/lib/consul
+sudo chmod a+w /var/lib/consul
 (
 cat <<-EOF
 	[Unit]
@@ -57,7 +61,7 @@ cat <<-EOF
 	
 	[Service]
 	Restart=on-failure
-	ExecStart=/usr/bin/consul agent -dev
+	ExecStart=/usr/bin/consul agent -config-dir=/vagrant/files/etc/consul.d
 	ExecReload=/bin/kill -HUP $MAINPID
 	
 	[Install]
@@ -82,6 +86,26 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y dnsmasq
 echo "server=/consul/127.0.0.1#8600" | sudo tee /etc/dnsmasq.conf
 sudo systemctl enable dnsmasq.service
 sudo systemctl restart dnsmasq
+
+echo "Starting nomad..."
+(
+cat <<-EOF
+	[Unit]
+	Description=nomad agent
+	Requires=network-online.target
+	After=network-online.target
+	
+	[Service]
+	Restart=on-failure
+	ExecStart=/usr/bin/nomad agent -config=/vagrant/files/etc/nomad.d
+	ExecReload=/bin/kill -HUP $MAINPID
+	
+	[Install]
+	WantedBy=multi-user.target
+EOF
+) | sudo tee /etc/systemd/system/nomad.service
+sudo systemctl enable nomad.service
+sudo systemctl start nomad
 SCRIPT
 
 Vagrant.configure(2) do |config|
@@ -92,6 +116,9 @@ Vagrant.configure(2) do |config|
   
   # Expose the nomad api and ui to the host
   config.vm.network "forwarded_port", guest: 4646, host: 4646, auto_correct: true
+
+  # Expose the consul api and ui to the host
+  config.vm.network "forwarded_port", guest: 8500, host: 8500
 
   # Increase memory for Parallels Desktop
   config.vm.provider "parallels" do |p, o|
