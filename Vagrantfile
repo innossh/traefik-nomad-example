@@ -1,7 +1,7 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-# Copied from https://github.com/hashicorp/nomad/tree/v0.7.1/demo/vagrant
+# Copied from https://github.com/hashicorp/nomad/blob/v0.8.3/demo/vagrant
 
 $script = <<SCRIPT
 # Update apt and get dependencies
@@ -12,14 +12,23 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y unzip curl vim \
     software-properties-common
 
 # Download Nomad
-NOMAD_VERSION=0.7.0
+NOMAD_VERSION=0.8.3
 
 echo "Fetching Nomad..."
 cd /tmp/
 curl -sSL https://releases.hashicorp.com/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_linux_amd64.zip -o nomad.zip
 
 echo "Fetching Consul..."
-curl -sSL https://releases.hashicorp.com/consul/1.0.0/consul_1.0.0_linux_amd64.zip > consul.zip
+CONSUL_VERSION=1.0.7
+curl -sSL https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip > consul.zip
+
+echo "Fetching Prometheus..."
+PROMETHEUS_VERSION=2.2.1
+curl -sSL https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz > prometheus.tar.gz
+
+echo "Fetching Grafana..."
+GRAFANA_VERSION=5.1.0
+curl -sSL https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_${GRAFANA_VERSION}_amd64.deb > grafana.deb
 
 echo "Installing Nomad..."
 unzip nomad.zip
@@ -108,10 +117,41 @@ EOF
 ) | sudo tee /etc/systemd/system/nomad.service
 sudo systemctl enable nomad.service
 sudo systemctl start nomad
+
+echo "Installing Prometheus..."
+tar xfz /tmp/prometheus.tar.gz
+sudo install prometheus-${PROMETHEUS_VERSION}.linux-amd64/prometheus /usr/local/bin/prometheus
+sudo install prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool /usr/local/bin/promtool
+sudo mkdir -p /var/lib/prometheus
+sudo chmod a+w /var/lib/prometheus
+(
+cat <<-EOF
+	[Unit]
+	Description=prometheus
+	Requires=network-online.target
+	After=network-online.target
+	
+	[Service]
+	Restart=always
+	ExecStart=/usr/local/bin/prometheus --config.file=/vagrant/files/etc/prometheus/prometheus.yml --storage.tsdb.path=/var/lib/prometheus/data
+	ExecReload=/bin/kill -HUP $MAINPID
+	
+	[Install]
+	WantedBy=multi-user.target
+EOF
+) | sudo tee /etc/systemd/system/prometheus.service
+sudo systemctl enable prometheus.service
+sudo systemctl start prometheus
+
+echo "Installing Grafana..."
+sudo apt-get install -y adduser libfontconfig
+sudo dpkg -i /tmp/grafana.deb
+sudo systemctl start grafana-server
 SCRIPT
 
 Vagrant.configure(2) do |config|
   config.vm.box = "bento/ubuntu-16.04" # 16.04 LTS
+  config.vm.box_version = "201802.02.0"
   config.vm.hostname = "nomad"
   config.vm.provision "shell", inline: $script, privileged: false
   config.vm.provision "docker" # Just install it
@@ -121,6 +161,12 @@ Vagrant.configure(2) do |config|
 
   # Expose the consul api and ui to the host
   config.vm.network "forwarded_port", guest: 8500, host: 8500
+
+  # Expose the prometheus server to the host
+  config.vm.network "forwarded_port", guest: 9090, host: 9090
+
+  # Expose the grafana ui to the host
+  config.vm.network "forwarded_port", guest: 3000, host: 3000
 
   # Increase memory for Parallels Desktop
   config.vm.provider "parallels" do |p, o|
